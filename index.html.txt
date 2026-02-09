@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Journal</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #000000;
+            --table-header: #f0f0f0;
+            --positive: #28a745;
+            --negative: #dc3545;
+            --accent: #007bff;
+        }
+        body.dark {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --table-header: #1e1e1e;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0 auto;
+            max-width: 1400px;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+        h1, h2 { text-align: center; margin-bottom: 10px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 10px;
+            text-align: left;
+        }
+        th { background: var(--table-header); }
+        .positive { color: var(--positive); font-weight: bold; }
+        .negative { color: var(--negative); font-weight: bold; }
+        form, #account-section, #filter-section, #customize {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+        }
+        label { display: inline-block; width: 140px; margin: 8px 0; font-weight: bold; }
+        input, select, button {
+            padding: 8px 12px;
+            margin: 4px 2px;
+            border-radius: 4px;
+            border: 1px solid #666;
+        }
+        button { 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold;
+        }
+        button:hover { opacity: 0.88; }
+        #stats { font-weight: bold; margin: 20px 0; text-align: center; font-size: 1.1em; }
+        .delete-btn { background: #dc3545; padding: 6px 12px; font-size: 0.9em; }
+        #currentBalance { font-size: 1.4em; }
+        @media (max-width: 800px) {
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid #ccc; margin-bottom: 15px; border-radius: 6px; }
+            td { border: none; border-bottom: 1px solid #eee; position: relative; padding-left: 50%; min-height: 30px; }
+            td:before { 
+                position: absolute; top: 8px; left: 8px; 
+                width: 45%; padding-right: 10px; 
+                white-space: nowrap; font-weight: bold; 
+            }
+            td:nth-of-type(1):before { content: "Date"; }
+            td:nth-of-type(2):before { content: "P/L"; }
+            td:nth-of-type(3):before { content: "Risk"; }
+            td:nth-of-type(4):before { content: "R"; }
+            td:nth-of-type(5):before { content: "Strategy"; }
+            td:nth-of-type(6):before { content: "Actions"; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Trading Journal</h1>
+
+<div id="customize">
+    <h2>Customize Appearance</h2>
+    <label>Theme:</label>
+    <select id="themeSelect">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+    </select>
+    <br><br>
+    <label>Accent Color:</label>
+    <select id="accentSelect">
+        <option value="#007bff">Blue</option>
+        <option value="#28a745">Green</option>
+        <option value="#ffc107">Yellow</option>
+        <option value="#6f42c1">Purple</option>
+        <option value="#fd7e14">Orange</option>
+    </select>
+</div>
+
+<div id="account-section">
+    <h2>Account Balance</h2>
+    <label>Starting Balance ($):</label>
+    <input type="number" id="startBalance" step="0.01" placeholder="e.g. 50000.00">
+    <button onclick="saveStartBalance()">Save</button>
+    <p>Current Balance: <strong id="currentBalance">$0.00 (+$0.00)</strong></p>
+</div>
+
+<h2>Add New Trade</h2>
+<form id="tradeForm">
+    <label>Date:</label>
+    <input type="date" id="date" required><br>
+    
+    <label>P/L ($):</label>
+    <input type="number" id="pl" step="0.01" required placeholder="Positive = win, negative = loss"><br>
+    
+    <label>Risk ($):</label>
+    <input type="number" id="risk" step="0.01" required><br>
+    
+    <label>R-multiple:</label>
+    <input type="number" id="r" step="0.1" required placeholder="e.g. 2.0, 1.5, -1"><br>
+    
+    <label>Strategy:</label>
+    <select id="strategy" required>
+        <option value="">Select...</option>
+        <option>Breakout</option>
+        <option>Pullback</option>
+        <option>Scalp</option>
+        <option>Reversal</option>
+        <option>Trend Follow</option>
+        <option>Mean Reversion</option>
+        <option>Other</option>
+    </select><br><br>
+    
+    <button type="submit">Add Trade</button>
+</form>
+
+<div id="filter-section">
+    <h2>Filter / Backdate Trades</h2>
+    <label>Month/Year:</label>
+    <input type="month" id="filterMonth">
+    <button onclick="applyFilter()">Filter</button>
+    <button onclick="clearFilter()">Show All</button>
+</div>
+
+<table id="tradeTable">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>P/L</th>
+            <th>Risk</th>
+            <th>R</th>
+            <th>Strategy</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="tradeBody"></tbody>
+    <tfoot id="statsRow"></tfoot>
+</table>
+
+<div id="stats"></div>
+
+<p style="text-align: center; margin-top: 40px; font-size: 1.1em;">
+    <a href="analytics.html">[Go to Analytics →]</a>
+</p>
+
+<script>
+// Data
+let trades = JSON.parse(localStorage.getItem('trades')) || [];
+let startBalance = parseFloat(localStorage.getItem('startBalance')) || 0;
+let currentFilter = null;
+
+// Theme
+function loadTheme() {
+    const theme = localStorage.getItem('theme') || 'light';
+    document.body.className = theme;
+    document.getElementById('themeSelect').value = theme;
+
+    const accent = localStorage.getItem('accent') || '#007bff';
+    document.documentElement.style.setProperty('--accent', accent);
+    document.getElementById('accentSelect').value = accent;
+}
+loadTheme();
+
+document.getElementById('themeSelect').addEventListener('change', e => {
+    document.body.className = e.target.value;
+    localStorage.setItem('theme', e.target.value);
+});
+
+document.getElementById('accentSelect').addEventListener('change', e => {
+    document.documentElement.style.setProperty('--accent', e.target.value);
+    localStorage.setItem('accent', e.target.value);
+});
+
+// Balance
+function saveStartBalance() {
+    startBalance = parseFloat(document.getElementById('startBalance').value) || 0;
+    localStorage.setItem('startBalance', startBalance);
+    updateBalanceDisplay();
+    updateStats(trades);
+}
+document.getElementById('startBalance').value = startBalance.toFixed(2);
+updateBalanceDisplay();
+
+function updateBalanceDisplay() {
+    const totalPL = trades.reduce((sum, t) => sum + (parseFloat(t.pl) || 0), 0);
+    const current = startBalance + totalPL;
+    document.getElementById('currentBalance').innerHTML = 
+        `$${current.toFixed(2)} <span style="font-size:0.85em;">(${totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)})</span>`;
+}
+
+// Render table
+function renderTable(filter = null) {
+    const tbody = document.getElementById('tradeBody');
+    tbody.innerHTML = '';
+
+    let shown = trades;
+    if (filter) shown = trades.filter(t => t.date.startsWith(filter));
+
+    shown.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    shown.forEach((trade, idx) => {
+        const row = document.createElement('tr');
+        const pl = parseFloat(trade.pl);
+        const cls = pl > 0 ? 'positive' : (pl < 0 ? 'negative' : '');
+        row.innerHTML = `
+            <td>${trade.date}</td>
+            <td class="${cls}">$${pl.toFixed(2)}</td>
+            <td>$${parseFloat(trade.risk).toFixed(2)}</td>
+            <td>${trade.r}R</td>
+            <td>${trade.strategy}</td>
+            <td><button class="delete-btn" onclick="deleteTrade(${idx})">Delete</button></td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    updateStats(shown);
+    updateBalanceDisplay();
+}
+
+function updateStats(list) {
+    if (list.length === 0) {
+        document.getElementById('statsRow').innerHTML = '<tr><td colspan="6" style="text-align:center;">No trades to display</td></tr>';
+        document.getElementById('stats').textContent = '';
+        return;
+    }
+
+    const totalPL = list.reduce((s, t) => s + parseFloat(t.pl), 0);
+    const wins = list.filter(t => parseFloat(t.pl) > 0).length;
+    const winRate = (wins / list.length * 100).toFixed(1);
+    const avgR = (list.reduce((s, t) => s + parseFloat(t.r), 0) / list.length).toFixed(2);
+
+    document.getElementById('statsRow').innerHTML = `
+        <tr style="font-weight:bold;background:#2c2c2c;color:#fff;">
+            <td>Total (${list.length})</td>
+            <td class="${totalPL>0?'positive':'negative'}">$${totalPL.toFixed(2)}</td>
+            <td>—</td>
+            <td>Avg ${avgR}R</td>
+            <td>Win: ${winRate}%</td>
+            <td>—</td>
+        </tr>
+    `;
+
+    document.getElementById('stats').textContent = 
+        `Showing ${list.length} trade${list.length === 1 ? '' : 's'} • Approx expectancy: ${(winRate/100 * avgR - (1-winRate/100)).toFixed(2)}R`;
+}
+
+// Add trade
+document.getElementById('tradeForm').addEventListener('submit', e => {
+    e.preventDefault();
+    trades.push({
+        date: document.getElementById('date').value,
+        pl: document.getElementById('pl').value,
+        risk: document.getElementById('risk').value,
+        r: document.getElementById('r').value,
+        strategy: document.getElementById('strategy').value
+    });
+    localStorage.setItem('trades', JSON.stringify(trades));
+    renderTable(currentFilter);
+    e.target.reset();
+});
+
+// Delete
+function deleteTrade(idx) {
+    if (confirm('Delete this trade?')) {
+        trades.splice(idx, 1);
+        localStorage.setItem('trades', JSON.stringify(trades));
+        renderTable(currentFilter);
+    }
+}
+
+// Filter
+function applyFilter() {
+    currentFilter = document.getElementById('filterMonth').value || null;
+    renderTable(currentFilter);
+}
+function clearFilter() {
+    currentFilter = null;
+    document.getElementById('filterMonth').value = '';
+    renderTable();
+}
+
+// Init
+renderTable();
+</script>
+
+</body>
+</html>
